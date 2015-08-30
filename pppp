@@ -1,0 +1,95 @@
+#!/usr/bin/perl -w
+
+use 5.010;
+use strict;
+use integer;
+
+
+our $PREFIX = shift;
+our $limit  = shift;
+our $impl_PREFIX = shift or "_IMPL";
+
+sub newline {
+  say "\n";
+  say "\n";
+}
+
+
+# heads
+say "#ifndef ${PREFIX}_INCLUDED";
+say "#define ${PREFIX}_INCLUDED";
+
+newline;
+
+# $PF_NUMS;
+
+for (my $i = 0; $i != $limit; ++$i) {
+  my $m = $i - 1;
+  my $p = $i + 1;
+  my $h = $i / 2;
+  my $d = $i * 2;
+
+  say "#define ${PREFIX}_VAL_$i $i";
+  say "#define ${PREFIX}_VAL_MINUS_$i   $m";
+  say "#define ${PREFIX}_VAL_PLUS_$i    $p";
+  say "#define ${PREFIX}_VAL_HALF_$i    $h";
+  say "#define ${PREFIX}_VAL_DOUBLE_$i  $d";
+}
+say "#define ${PREFIX}_PLUS(N)   ${PREFIX}_CAT(${PREFIX}_VAL_PLUS_, N)";
+say "#define ${PREFIX}_MINUS(N)  ${PREFIX}_CAT(${PREFIX}_VAL_MINUS_, N)";
+say "#define ${PREFIX}_HALF(N)   ${PREFIX}_CAT(${PREFIX}_VAL_HALF_, N)";
+say "#define ${PREFIX}_DOUBLE(N) ${PREFIX}_CAT(${PREFIX}_VAL_DOUBLE_, N)";
+
+newline;
+
+print "#define ${PREFIX}_NARGS_DUMMY_ARGS ";
+for (my $i = $limit - 1; $i > 0; --$i) {
+  print "$i, ";
+}
+say "0";
+
+say "";
+
+print "#define ${PREFIX}_NARGS_HELPER(";
+for (my $i = 0; $i != $limit; ++$i) {
+  print "_$i, ";
+}
+say "Q, ...) Q";
+
+say "#define ${PREFIX}_NARGS_DO_CNT(args...) ${PREFIX}_NARGS_HELPER(args)";
+say "#define ${PREFIX}_NARGS_COUNT(args...)  ${PREFIX}_NARGS_DO_CNT(_, ##args, ${PREFIX}_NARGS_DUMMY_ARGS)";
+
+newline;
+
+say "#define ${PREFIX}_CAT(a, b)      ${PREFIX}_KITTY(a, b)";
+say "#define ${PREFIX}_KITTY(a, b)    a##b";
+say "#define ${PREFIX}_STRINGIFY(a)   ${PREFIX}_QUOTE(a)";
+say "#define ${PREFIX}_QUOTE(a)       #a";
+
+newline;
+
+say "#define ${PREFIX}_JOIN_2(a, b)     ${PREFIX}_CAT(a, b)";
+for (my $i = 3; $i < $limit; ++$i) {
+  my  $m = $i - 1;
+  say "#define ${PREFIX}_JOIN_${i}(car, cdr...)  ${PREFIX}_CAT(car, ${PREFIX}_JOIN_${m}(cdr))";
+}
+say "#define ${PREFIX}_JOIN(args...)     ${PREFIX}_CAT(${PREFIX}_JOIN_, ${PREFIX}_NARGS_COUNT(args))(args)";
+
+newline;
+
+say "#define ${PREFIX}_APPLY_0(M, F, args...) F, ##args";
+say "#define ${PREFIX}_APPLY_1(M, F, args...) M(F, ##args)";
+for (my $i = 2; $i < $limit; ++$i) {
+  my $m = $i - 1;
+  say "#define ${PREFIX}_APPLY_${i}(M, F, args...)  M(${PREFIX}_APPLY_${m}(M, F, ##args), ##args)";
+}
+say "#define ${PREFIX}_APPLY(N, M, F, args...)     ${PREFIX}_CAT(${PREFIX}_APPLY_, N)(M, F, ##args)";
+
+say "#define ${PREFIX}_PLUSX(N, PLS)    ${PREFIX}_APPLY(PLS, ${PREFIX}_PLUS, N)";
+say "#define ${PREFIX}_MINUSX(N, MNS)   ${PREFIX}_APPLY(MNS, ${PREFIX}_MINUS, N)";
+
+newline;
+
+# end
+say "#endif // ${PREFIX}_INCLUDED";
+
